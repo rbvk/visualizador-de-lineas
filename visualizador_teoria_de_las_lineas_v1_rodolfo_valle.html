@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Visualizador de la Teoría de las Líneas</title>
+<style>
+:root{
+  --bg:#f4f1ed; --panel:#fff; --ink:#0b0b0b; --muted:#555; --line:#ddd;
+  --blue:#0b0b0b; --red:#d41111; --green:#17a05d; --purple:#7c3aed; --orange:#d41111;
+  --ring:#f3f0e7; --rope:#111; --corner:#0b0b0b;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:18px 22px 12px;border-bottom:3px solid #d41111;background:#0b0b0b;color:#fff}
+h1{margin:0 0 6px;font-size:25px;line-height:1.1}
+.subtitle{margin:0;color:#e6e6e6;font-size:14px}
+.credit{margin:8px 0 0;color:#d41111;font-size:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.versionTag{margin:4px 0 0;color:#fff;font-size:12px;font-weight:800;letter-spacing:.04em}
+.instructionsBox{background:#0b0b0b;color:#fff;border:2px solid #d41111;border-radius:12px;padding:12px;margin-bottom:12px;font-size:13px;line-height:1.38}
+.instructionsBox strong{color:#fff}
+.instructionsBox ol{margin:8px 0 0 18px;padding:0}
+.instructionsBox li{margin:4px 0}
+.layout{display:grid;grid-template-columns:1fr 370px;gap:14px;padding:14px}
+.card{background:var(--panel);border:1px solid #e2e2e2;border-radius:14px;box-shadow:0 1px 6px rgba(0,0,0,.05);overflow:hidden}
+#stageWrap{min-height:850px;position:relative}
+svg{width:100%;height:850px;display:block;touch-action:none;user-select:none;background:linear-gradient(#fff,#fbfbfb)}
+.sidebar{padding:14px}
+.control{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #eee}
+.control label{display:block;font-weight:850;font-size:13px;margin-bottom:7px}
+input[type="range"]{width:100%}
+select,button{width:100%;padding:10px 11px;border:1px solid #d5d5d5;border-radius:10px;background:#fff;color:var(--ink);font-size:14px}
+button{cursor:pointer;font-weight:850;border-color:#111} button:hover{background:#111;color:#fff}
+.readout{padding:12px;border-radius:12px;background:#fff;border:1px solid #111;margin-bottom:12px}
+.readout h2{margin:0 0 8px;font-size:16px}
+.row{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:4px 0;border-bottom:1px dashed #ddd}
+.row:last-child{border-bottom:0}
+.value{font-weight:900;text-align:right;max-width:195px}
+.cue{font-size:13px;line-height:1.35;color:#111;background:#fff6f6;border:1px solid #d41111;border-radius:12px;padding:11px;margin-bottom:12px}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-top:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid #e4e4e4;border-radius:999px;background:#fff}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.small{color:var(--muted);font-size:12px;line-height:1.35}
+.laneLabel{font-weight:900;font-size:11.2px;paint-order:stroke;stroke:white;stroke-width:4px;stroke-linejoin:round}
+.lanePunch{font-weight:750;font-size:9.8px;paint-order:stroke;stroke:white;stroke-width:3px;stroke-linejoin:round}
+.handleText{font-weight:900;font-size:14px;paint-order:stroke;stroke:white;stroke-width:4px;stroke-linejoin:round}
+
+.laneRayLabel{font-weight:850;font-size:10px;paint-order:stroke;stroke:white;stroke-width:3px;stroke-linejoin:round}
+.handle{cursor:grab}.handle:active{cursor:grabbing}
+.helpBox{background:#fff6f6;border:1px solid #d41111;border-radius:12px;padding:10px;margin-top:8px}
+@media(max-width:980px){.layout{grid-template-columns:1fr}svg{height:720px}#stageWrap{min-height:720px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Visualizador de la Teoría de las Líneas</h1>
+  <p class="subtitle">Ring grande para ubicar y rotar a los peleadores. Cada línea tiene un rayo angular que nace desde el peleador.</p>
+  <p class="credit">HECHO POR RODOLFO VALLE</p>
+  <p class="versionTag">v1.0 — Julio 2026</p>
+</header>
+
+<main class="layout">
+<section class="card" id="stageWrap">
+<svg id="svg" viewBox="0 0 1650 950" aria-label="Visualizador de teoría de las líneas con ring largo">
+<defs>
+  <marker id="arrowBlue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#0b0b0b"/></marker>
+  <marker id="arrowRed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#d41111"/></marker>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity=".18"/></filter>
+  <pattern id="matGrid" width="80" height="80" patternUnits="userSpaceOnUse">
+    <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#000" stroke-opacity=".055" stroke-width="1"/>
+  </pattern>
+</defs>
+<g id="draw"></g>
+</svg>
+</section>
+
+<aside class="card sidebar">
+  <div class="readout">
+    <h2>Lectura en vivo</h2>
+    <div class="row"><span>Carril de A sobre B</span><span class="value" id="laneARead">—</span></div>
+    <div class="row"><span>Rango A→B</span><span class="value" id="distARead">—</span></div>
+    <div class="row"><span>Carril de B sobre A</span><span class="value" id="laneBRead">—</span></div>
+    <div class="row"><span>Rango B→A</span><span class="value" id="distBRead">—</span></div>
+    <div class="row"><span>Intersección</span><span class="value" id="intersectionRead">—</span></div>
+    <div class="row"><span>Riesgo</span><span class="value" id="dangerRead">—</span></div>
+  </div>
+
+  <div class="cue" id="cueBox">
+    <strong>Regla:</strong> ubica, rota y observa los carriles e intersecciones.
+  </div>
+
+  <div class="instructionsBox">
+    <strong>Cómo usarlo</strong>
+    <ol>
+      <li>Arrastra el cuerpo de cada peleador para ubicarlo dentro del ring.</li>
+      <li>Arrastra la manilla roja para rotar su línea central.</li>
+      <li>Ajusta ancho, ángulo y transparencia para estudiar cada línea.</li>
+      <li>Observa la lectura A→B, B→A y la intersección para detectar zonas 50/50.</li>
+    </ol>
+  </div>
+
+
+  <div class="control">
+    <label for="stanceA">Guardia de A</label>
+    <select id="stanceA">
+      <option value="orthodox" selected>Ortodoxo: lead izquierda / rear derecha</option>
+      <option value="southpaw">Zurdo: lead derecha / rear izquierda</option>
+    </select>
+  </div>
+
+  <div class="control">
+    <label for="stanceB">Guardia de B</label>
+    <select id="stanceB">
+      <option value="orthodox" selected>Ortodoxo: lead izquierda / rear derecha</option>
+      <option value="southpaw">Zurdo: lead derecha / rear izquierda</option>
+    </select>
+  </div>
+
+  <div class="control">
+    <label for="laneWidth">Ancho de carril: <span id="laneWidthVal">205</span></label>
+    <input id="laneWidth" type="range" min="120" max="340" value="205" step="5"/>
+  </div>
+
+  <div class="control">
+    <label for="coneAngle">Ángulo de proyección: <span id="coneAngleVal">24°</span></label>
+    <input id="coneAngle" type="range" min="8" max="55" value="24" step="1"/>
+  </div>
+
+  <div class="control">
+    <label for="closeThreshold">Interior/corta distancia: <span id="closeThresholdVal">38%</span></label>
+    <input id="closeThreshold" type="range" min="22" max="60" value="38" step="1"/>
+    <p class="small">Interior = más cerca. Exterior = más lejos. Solo afecta la lectura de rango; los carriles mantienen sus números.</p>
+  </div>
+
+  <div class="control">
+    <label for="opacityA">Transparencia de A: <span id="opacityAVal">55%</span></label>
+    <input id="opacityA" type="range" min="0" max="100" value="55" step="5"/>
+  </div>
+
+  <div class="control">
+    <label for="opacityB">Transparencia de B: <span id="opacityBVal">55%</span></label>
+    <input id="opacityB" type="range" min="0" max="100" value="55" step="5"/>
+  </div>
+
+  <div class="control">
+    <button id="resetBtn">Restablecer</button>
+    <p class="small">Los peleadores están restringidos dentro del ring. La manilla de rotación puede quedar cerca del borde. Transparencia 0% oculta las líneas/carriles, pero mantiene visible el cuerpo y la manilla para poder seguir moviendo.</p>
+  </div>
+
+  <div class="legend">
+    <span class="pill"><span class="dot" style="background:#0b0b0b"></span>A</span>
+    <span class="pill"><span class="dot" style="background:#d41111"></span>B</span>
+    <span class="pill"><span class="dot" style="background:#d41111"></span>Rotación</span>
+    <span class="pill"><span class="dot" style="background:#7c3aed"></span>Intersección</span>
+  </div>
+
+  <div class="helpBox small">
+    <strong>Nuevo:</strong> cada línea tiene un rayo angular que nace desde el peleador. Úsalo para ver la dirección exacta de cada carril al rotar A o B.
+  </div>
+</aside>
+</main>
+
+<script>
+(function(){
+const svg=document.getElementById('svg'), draw=document.getElementById('draw');
+const stanceAEl=document.getElementById('stanceA'), stanceBEl=document.getElementById('stanceB');
+const laneWidthEl=document.getElementById('laneWidth'), coneAngleEl=document.getElementById('coneAngle'), closeThresholdEl=document.getElementById('closeThreshold');
+const opacityAEl=document.getElementById('opacityA'), opacityBEl=document.getElementById('opacityB');
+const laneWidthVal=document.getElementById('laneWidthVal'), coneAngleVal=document.getElementById('coneAngleVal'), closeThresholdVal=document.getElementById('closeThresholdVal');
+const opacityAVal=document.getElementById('opacityAVal'), opacityBVal=document.getElementById('opacityBVal');
+const laneARead=document.getElementById('laneARead'), distARead=document.getElementById('distARead');
+const laneBRead=document.getElementById('laneBRead'), distBRead=document.getElementById('distBRead');
+const intersectionRead=document.getElementById('intersectionRead'), dangerRead=document.getElementById('dangerRead'), cueBox=document.getElementById('cueBox');
+
+const RING={x:105,y:95,w:1440,h:760,pad:35};
+const state={A:{x:520,y:475,a:-6},B:{x:1130,y:475,a:174},drag:null,dragOffset:null};
+
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+function clampToRing(p){
+  return {
+    x: clamp(p.x, RING.x+RING.pad, RING.x+RING.w-RING.pad),
+    y: clamp(p.y, RING.y+RING.pad, RING.y+RING.h-RING.pad)
+  };
+}
+function add(a,b){return{x:a.x+b.x,y:a.y+b.y}} function sub(a,b){return{x:a.x-b.x,y:a.y-b.y}}
+function mul(a,s){return{x:a.x*s,y:a.y*s}} function dot(a,b){return a.x*b.x+a.y*b.y}
+function cross(a,b){return a.x*b.y-a.y*b.x} function len(a){return Math.hypot(a.x,a.y)}
+function perpLeft(u){return{x:-u.y,y:u.x}} function deg2rad(d){return d*Math.PI/180} function rad2deg(r){return r*180/Math.PI}
+function uFromAngle(a){return{x:Math.cos(deg2rad(a)),y:Math.sin(deg2rad(a))}}
+function angleFrom(p,o){return rad2deg(Math.atan2(p.y-o.y,p.x-o.x))}
+function rotate(u,rad){return{x:u.x*Math.cos(rad)-u.y*Math.sin(rad),y:u.x*Math.sin(rad)+u.y*Math.cos(rad)}}
+function pstr(p){return`${p.x.toFixed(1)},${p.y.toFixed(1)}`} function poly(points){return points.map(pstr).join(' ')}
+function line(x1,y1,x2,y2,attrs=''){return`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${attrs}/>`}
+
+function svgPoint(evt){
+  const pt=svg.createSVGPoint(); pt.x=evt.clientX; pt.y=evt.clientY;
+  const r=pt.matrixTransform(svg.getScreenCTM().inverse());
+  return{x:clamp(r.x,0,1650),y:clamp(r.y,0,950)}
+}
+
+function lineIntersection(p,r,q,s){
+  const rxs=cross(r,s); if(Math.abs(rxs)<0.0001)return null;
+  const qp=sub(q,p); const t=cross(qp,s)/rxs; const u=cross(qp,r)/rxs;
+  return{point:add(p,mul(r,t)),t,u}
+}
+
+function laneData(stance){
+  if(stance==="orthodox"){
+    return [
+      {core:"Closed", name:"Cerrado (4)"},
+      {core:"Jab", name:"Cross (2,6)"},
+      {core:"Center", name:"Centro (1,2)"},
+      {core:"Cross", name:"Jab (1,5)"},
+      {core:"Open", name:"Abierto (3)"}
+    ];
+  }
+  return [
+    {core:"Open", name:"Abierto (3)"},
+    {core:"Cross", name:"Jab (1,5)"},
+    {core:"Center", name:"Centro (1,2)"},
+    {core:"Jab", name:"Cross (2,6)"},
+    {core:"Closed", name:"Cerrado (4)"}
+  ];
+}
+
+function classifyLane(origin, angle, target, w, stance){
+  const u=uFromAngle(angle), n=perpLeft(u), rel=sub(target,origin);
+  const along=dot(rel,u), offset=dot(rel,n), side=offset/(w/2);
+  const bins = stance==="orthodox"
+    ? [
+      {min:.6,max:999,label:"Cerrado (4)",core:"Closed"},
+      {min:.2,max:.6,label:"Carril Cross (2,6)",core:"Jab"},
+      {min:-.2,max:.2,label:"Centro (1,2)",core:"Center"},
+      {min:-.6,max:-.2,label:"Carril Jab (1,5)",core:"Cross"},
+      {min:-999,max:-.6,label:"Abierto (3)",core:"Open"}
+    ]
+    : [
+      {min:.6,max:999,label:"Abierto (3)",core:"Open"},
+      {min:.2,max:.6,label:"Carril Jab (1,5)",core:"Cross"},
+      {min:-.2,max:.2,label:"Centro (1,2)",core:"Center"},
+      {min:-.6,max:-.2,label:"Carril Cross (2,6)",core:"Jab"},
+      {min:-999,max:-.6,label:"Cerrado (4)",core:"Closed"}
+    ];
+  const lane=bins.find(b=>side<=b.max&&side>=b.min)||{label:"Fuera de mapa",core:"Unknown"};
+  return{...lane,along,offset,side};
+}
+
+function rangeRead(origin,target,maxDist,threshold){
+  const d=len(sub(target,origin)), pct=clamp(d/maxDist,0,1);
+  return{r:pct<=threshold?"Interior/corta":"Exterior/larga", pct, d}
+}
+
+
+function geom(f,w,angleDeg,coneLen){
+  const o={x:f.x,y:f.y}, u=uFromAngle(f.a), n=perpLeft(u), rad=deg2rad(angleDeg);
+  const end=add(o,mul(u,coneLen));
+  return{
+    o,u,n,end,
+    startL:add(o,mul(n,w/2)), startR:add(o,mul(n,-w/2)),
+    endL:add(end,mul(n,w/2)), endR:add(end,mul(n,-w/2)),
+    c1:add(o,mul(rotate(u,rad),coneLen)), c2:add(o,mul(rotate(u,-rad),coneLen)),
+    rot:add(o,mul(u,82))
+  }
+}
+
+function drawRing(){
+  const x=RING.x,y=RING.y,w=RING.w,h=RING.h;
+  const corner=58;
+  return `
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="22" fill="#f3f0e7" stroke="#222" stroke-width="6"/>
+    <rect x="${x+22}" y="${y+22}" width="${w-44}" height="${h-44}" rx="16" fill="url(#matGrid)" stroke="#222" stroke-width="2" opacity=".88"/>
+    <rect x="${x+46}" y="${y+46}" width="${w-92}" height="${h-92}" rx="10" fill="none" stroke="#222" stroke-width="2" opacity=".62"/>
+    <rect x="${x+72}" y="${y+72}" width="${w-144}" height="${h-144}" rx="8" fill="none" stroke="#222" stroke-width="1.4" opacity=".38"/>
+    <line x1="${x+w/2}" y1="${y+32}" x2="${x+w/2}" y2="${y+h-32}" stroke="#000" stroke-width="1.2" stroke-dasharray="10 10" opacity=".25"/>
+    <line x1="${x+32}" y1="${y+h/2}" x2="${x+w-32}" y2="${y+h/2}" stroke="#000" stroke-width="1.2" stroke-dasharray="10 10" opacity=".25"/>
+    <rect x="${x-6}" y="${y-6}" width="${corner}" height="${corner}" rx="10" fill="#0b0b0b" opacity=".85"/>
+    <rect x="${x+w-corner+6}" y="${y-6}" width="${corner}" height="${corner}" rx="10" fill="#d41111" opacity=".85"/>
+    <rect x="${x-6}" y="${y+h-corner+6}" width="${corner}" height="${corner}" rx="10" fill="#d41111" opacity=".85"/>
+    <rect x="${x+w-corner+6}" y="${y+h-corner+6}" width="${corner}" height="${corner}" rx="10" fill="#0b0b0b" opacity=".85"/>
+    <text x="${x+w/2}" y="${y-24}" text-anchor="middle" fill="#222" font-size="18" font-weight="900">Ring / espacio de ubicación</text>
+    <text x="${x+22}" y="${y+h+34}" fill="#333" font-size="13">Arrastra dentro del ring. Rota con la manilla roja.</text>
+    <text x="${x+w-24}" y="${y+h+20}" text-anchor="end" fill="#d41111" font-size="13" font-weight="900">HECHO POR RODOLFO VALLE</text>
+    <text x="${x+w-24}" y="${y+h+40}" text-anchor="end" fill="#111" font-size="12" font-weight="800">v1.0 — Julio 2026</text>
+  `;
+}
+
+function fighterBody(f,color,label,id,stance){
+  const o={x:f.x,y:f.y}, u=uFromAngle(f.a), n=perpLeft(u);
+  const nose=add(o,mul(u,31)), back=add(o,mul(u,-20));
+  const left=add(back,mul(n,20)), right=add(back,mul(n,-20));
+  const leadSide = stance==="orthodox" ? "L" : "R";
+  return`
+    <g class="handle" data-id="${id}" filter="url(#shadow)">
+      <polygon points="${poly([nose,left,right])}" fill="white" stroke="${color}" stroke-width="4"/>
+      <circle cx="${o.x}" cy="${o.y}" r="10" fill="${color}"/>
+      <text x="${o.x}" y="${o.y-36}" text-anchor="middle" class="handleText" fill="${color}">${label}</text>
+      <text x="${add(o,mul(n,34)).x}" y="${add(o,mul(n,34)).y+4}" text-anchor="middle" class="lanePunch" fill="${color}">lead ${leadSide}</text>
+    </g>`;
+}
+
+function rotationHandle(f,color,id){
+  const g=geom(f,0,0,0), p=g.rot;
+  return`
+    <g class="handle" data-id="${id}" filter="url(#shadow)">
+      <line x1="${f.x}" y1="${f.y}" x2="${p.x}" y2="${p.y}" stroke="#d41111" stroke-width="2" stroke-dasharray="6 5"/>
+      <circle cx="${p.x}" cy="${p.y}" r="15" fill="white" stroke="#d41111" stroke-width="3"/>
+      <path d="M ${p.x-7} ${p.y} A 7 7 0 1 1 ${p.x+7} ${p.y}" fill="none" stroke="#d41111" stroke-width="2"/>
+      <text x="${p.x}" y="${p.y-24}" text-anchor="middle" class="handleText" fill="#d41111">rotar</text>
+    </g>`;
+}
+
+function renderFighter(f,color,label,stance,w,angleDeg,coneLen,markerId,opacity=0.55){
+  const g=geom(f,w,angleDeg,coneLen), lanes=laneData(stance);
+  let bands="";
+  let laneRays="";
+  const fills=color==="#0b0b0b"?["#f0f0f0","#eaf0ff","#f7f7f7","#fff1f1","#f0f0f0"]:["#f0f0f0","#fff1f1","#f7f7f7","#eaf0ff","#f0f0f0"];
+  for(let i=0;i<5;i++){
+    const top=w/2-i*w/5, bot=w/2-(i+1)*w/5;
+    const q1=add(g.o,mul(g.n,top)), q2=add(g.end,mul(g.n,top)), q3=add(g.end,mul(g.n,bot)), q4=add(g.o,mul(g.n,bot));
+    const centerOff=(top+bot)/2;
+    const lp=add(add(g.o,mul(g.u,coneLen*.42)),mul(g.n,centerOff));
+    const rayEnd=add(g.end,mul(g.n,centerOff));
+    const rayLabel=add(add(g.o,mul(g.u,Math.min(130, coneLen*.20))),mul(g.n,centerOff*.34));
+    laneRays+=`<line x1="${g.o.x}" y1="${g.o.y}" x2="${rayEnd.x}" y2="${rayEnd.y}" stroke="${color}" stroke-width="2.1" stroke-dasharray="9 6" opacity="${opacity}"/>`;
+    laneRays+=`<circle cx="${rayEnd.x}" cy="${rayEnd.y}" r="4.5" fill="${color}" opacity="${opacity}"/>`;
+    laneRays+=`<text x="${rayLabel.x}" y="${rayLabel.y+3}" text-anchor="middle" class="laneRayLabel" fill="${color}" opacity="${opacity}">${lanes[i].name}</text>`;
+    bands+=`<polygon points="${poly([q1,q2,q3,q4])}" fill="${fills[i]}" opacity="${opacity*0.70}" stroke="none"/>`;
+    bands+=`<text x="${lp.x}" y="${lp.y-5}" text-anchor="middle" class="laneLabel" fill="${color}" opacity="${opacity}">${lanes[i].name}</text>`;
+  }
+  return`
+    <g>
+      <polygon points="${poly([g.o,g.c1,g.c2])}" fill="${color}" opacity="${opacity*0.10}" stroke="${color}" stroke-width="2"/>
+      ${laneRays}
+      ${bands}
+      ${laneRays}
+      <line x1="${g.o.x}" y1="${g.o.y}" x2="${g.end.x}" y2="${g.end.y}" stroke="${color}" stroke-width="3" opacity="${opacity}" marker-end="url(#${markerId})"/>
+      <line x1="${g.o.x}" y1="${g.o.y}" x2="${g.c1.x}" y2="${g.c1.y}" stroke="${color}" stroke-width="1.6" stroke-dasharray="7 5" opacity="${opacity}"/>
+      <line x1="${g.o.x}" y1="${g.o.y}" x2="${g.c2.x}" y2="${g.c2.y}" stroke="${color}" stroke-width="1.6" stroke-dasharray="7 5" opacity="${opacity}"/>
+      <line x1="${g.startL.x}" y1="${g.startL.y}" x2="${g.endL.x}" y2="${g.endL.y}" stroke="${color}" stroke-width="2" opacity="${opacity}"/>
+      <line x1="${g.startR.x}" y1="${g.startR.y}" x2="${g.endR.x}" y2="${g.endR.y}" stroke="${color}" stroke-width="2" opacity="${opacity}"/>
+      <text x="${add(g.o,mul(g.u,coneLen*.15)).x}" y="${add(g.o,mul(g.u,coneLen*.15)).y-12}" text-anchor="middle" class="laneLabel" fill="${color}">${label}: línea central</text>
+    </g>`;
+}
+
+function render(){
+  const A=state.A,B=state.B,w=+laneWidthEl.value,angleDeg=+coneAngleEl.value,threshold=+closeThresholdEl.value/100;
+  const opacityA=+opacityAEl.value/100, opacityB=+opacityBEl.value/100;
+  const stanceA=stanceAEl.value, stanceB=stanceBEl.value, coneLen=760;
+  laneWidthVal.textContent=w; coneAngleVal.textContent=`${angleDeg}°`; closeThresholdVal.textContent=`${Math.round(threshold*100)}%`;
+  opacityAVal.textContent=`${Math.round(opacityA*100)}%`; opacityBVal.textContent=`${Math.round(opacityB*100)}%`;
+
+  const gA=geom(A,w,angleDeg,coneLen), gB=geom(B,w,angleDeg,coneLen);
+  const inter=lineIntersection({x:A.x,y:A.y},gA.u,{x:B.x,y:B.y},gB.u);
+  let intersectionDraw="", intStatus="Sin cruce", danger="Menor cruce directo";
+  if(inter && inter.t>0 && inter.t<coneLen && inter.u>0 && inter.u<coneLen){
+    const P=inter.point; intStatus="Carriles cruzados"; danger="50/50 posible";
+    intersectionDraw=`<circle cx="${P.x}" cy="${P.y}" r="43" fill="#7c3aed" opacity=".18" stroke="#7c3aed" stroke-width="3" stroke-dasharray="7 5"/>
+      <text x="${P.x}" y="${P.y-53}" text-anchor="middle" class="laneLabel" fill="#7c3aed">Intersección</text>`;
+  }
+
+  const laneA=classifyLane({x:A.x,y:A.y},A.a,{x:B.x,y:B.y},w,stanceA);
+  const laneB=classifyLane({x:B.x,y:B.y},B.a,{x:A.x,y:A.y},w,stanceB);
+  const distA=rangeRead({x:A.x,y:A.y},{x:B.x,y:B.y},900,threshold);
+  const distB=rangeRead({x:B.x,y:B.y},{x:A.x,y:A.y},900,threshold);
+  laneARead.textContent=laneA.label; distARead.textContent=`${distA.r} (${Math.round(distA.d)} px)`;
+  laneBRead.textContent=laneB.label; distBRead.textContent=`${distB.r} (${Math.round(distB.d)} px)`;
+  intersectionRead.textContent=intStatus; dangerRead.textContent=danger;
+  cueBox.innerHTML=`<strong>A:</strong> ${laneA.label} + ${distA.r}.<br><strong>B:</strong> ${laneB.label} + ${distB.r}.<br><strong>Clave:</strong> ubica a los peleadores dentro del ring y rota sus carriles.`;
+
+  draw.innerHTML=`
+    ${drawRing()}
+    ${renderFighter(A,"#0b0b0b","A",stanceA,w,angleDeg,coneLen,"arrowBlue",opacityA)}
+    ${renderFighter(B,"#d41111","B",stanceB,w,angleDeg,coneLen,"arrowRed",opacityB)}
+    ${intersectionDraw}
+    ${rotationHandle(A,"#0b0b0b","Arot")}
+    ${rotationHandle(B,"#d41111","Brot")}
+    ${fighterBody(A,"#0b0b0b","A","A",stanceA)}
+    ${fighterBody(B,"#d41111","B","B",stanceB)}
+    <text x="132" y="146" fill="#222" font-size="15" font-weight="900">Ring largo + carriles independientes</text>
+    <text x="132" y="170" fill="#666" font-size="13">Cuerpo = mover · Manilla naranja = rotar · Cada línea tiene su rayo angular</text>
+  `;
+  bindHandles();
+}
+
+function bindHandles(){
+  draw.querySelectorAll('.handle').forEach(el=>{
+    el.addEventListener('pointerdown',evt=>{
+      const id=el.getAttribute('data-id'); state.drag=id;
+      const p=svgPoint(evt);
+      if(id==="A") state.dragOffset=sub(p,{x:state.A.x,y:state.A.y});
+      else if(id==="B") state.dragOffset=sub(p,{x:state.B.x,y:state.B.y});
+      else state.dragOffset=null;
+      el.setPointerCapture(evt.pointerId);
+    });
+  });
+}
+
+svg.addEventListener('pointermove',evt=>{
+  if(!state.drag)return;
+  const p=svgPoint(evt);
+  if(state.drag==="A"){
+    const moved=clampToRing({x:p.x-state.dragOffset.x,y:p.y-state.dragOffset.y});
+    state.A.x=moved.x; state.A.y=moved.y;
+  }else if(state.drag==="B"){
+    const moved=clampToRing({x:p.x-state.dragOffset.x,y:p.y-state.dragOffset.y});
+    state.B.x=moved.x; state.B.y=moved.y;
+  }else if(state.drag==="Arot"){
+    state.A.a=angleFrom(p,state.A);
+  }else if(state.drag==="Brot"){
+    state.B.a=angleFrom(p,state.B);
+  }
+  render();
+});
+svg.addEventListener('pointerup',()=>{state.drag=null;state.dragOffset=null});
+svg.addEventListener('pointercancel',()=>{state.drag=null;state.dragOffset=null});
+[stanceAEl,stanceBEl,laneWidthEl,coneAngleEl,closeThresholdEl,opacityAEl,opacityBEl].forEach(el=>el.addEventListener('input',render));
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  state.A={x:520,y:475,a:-6}; state.B={x:1130,y:475,a:174};
+  stanceAEl.value="orthodox"; stanceBEl.value="orthodox"; laneWidthEl.value=205; coneAngleEl.value=24; closeThresholdEl.value=38; opacityAEl.value=55; opacityBEl.value=55;
+  render();
+});
+render();
+})();
+</script>
+</body>
+</html>
