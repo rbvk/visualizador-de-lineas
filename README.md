@@ -5,8 +5,7 @@ MADE BY / HECHO POR RODOLFO VALLE
 v1.2 — July / Julio 2026
 
 Spanish URL:
-https://rodolfovalle.github.io/visualizador-de-lineas
-
+https://rbvk.github.io/visualizador-de-lineas/
 English URL:
-https://rodolfovalle.github.io/visualizador-de-lineas/en
+https://rbvk.github.io/visualizador-de-lineas/en
 
